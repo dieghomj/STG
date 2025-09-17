@@ -15,15 +15,19 @@ public:
 	~CEnemy();
 
 	void Move();
-	void SetDying();
+	void SetState(enCharaState state);
 	void DestroyAnim();
 	void Shoot();
+	void ResetEnemy();
 
 	VEC2 GetPos() const { return m_Enemy.position; };
 	int GetState() const { return m_Enemy.state; };
 	int GetAnimCnt() const { return m_Enemy.ExpAnimCnt; };
 
 private :
+	
+		
 	CHARA		m_Enemy;
+
 };
 

@@ -17,6 +17,10 @@ CEnemy::~CEnemy()
 //敵機の動作
 void CEnemy::Move()
 {
+	
+	if (m_Enemy.state != enCharaState::Living) 
+		return;
+
 	m_Enemy.position.y += E_SPD;	//下へ移動
 
 	//画面の外へ出た
@@ -25,11 +29,16 @@ void CEnemy::Move()
 	}
 }
 
-void CEnemy::SetDying()
+void CEnemy::SetState(enCharaState state)
 {
-	//敵機.
-	m_Enemy.state = enCharaState::Dying;			//状態を死亡中に設定
-	m_Enemy.ExpAnimCnt = 0;						//爆発アニメーションカウンタを０に設定
+	//敵機が生存中のときに呼び出される
+	if (state == enCharaState::Dying)
+	{
+		m_Enemy.state = state;			//状態を死亡中に設定
+		m_Enemy.ExpAnimCnt = 0;						//爆発アニメーションカウンタを０に設定
+	}
+	else m_Enemy.state = state;
+
 }
 
 void CEnemy::DestroyAnim()
@@ -39,8 +48,14 @@ void CEnemy::DestroyAnim()
 	{
 		m_Enemy.state = enCharaState::Living;	//状態生存中.
 
-		//敵機の出現位置を変更
-		m_Enemy.position.x = rand() % (WND_W - C_SIZE); //ランダムで出現位置を設定 ( 0 ~ 416);
-		m_Enemy.position.y = -C_SIZE;
+		ResetEnemy();
 	}
+}
+
+void CEnemy::ResetEnemy()
+{
+	//敵機の出現位置を変更
+	m_Enemy.state = enCharaState::Living;	//状態生存中.
+	m_Enemy.position.x = rand() % (WND_W - C_SIZE); //ランダムで出現位置を設定 ( 0 ~ 416);
+	m_Enemy.position.y = -C_SIZE;
 }

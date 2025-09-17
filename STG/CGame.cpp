@@ -187,7 +187,7 @@ void CGame::Destroy()
 
 	//フォントの解放.
 	DeleteObject(m_hFont);
-	RemoveFontResourceEx(("Data\Font\BoldPixels.ttf"), FR_PRIVATE, 0);
+	RemoveFontResourceEx(("Data\\Font\\BoldPixels.ttf"), FR_PRIVATE, 0);
 
 	//メモリDCの解放.
 	DeleteDC(m_hMemDC);
@@ -272,6 +272,7 @@ void CGame::Update()
 		}
 
 		break;
+	
 	case enScene::GameMain:
 	{
 		//Get cursor position
@@ -351,12 +352,14 @@ void CGame::Update()
 						m_pPlayer->SetPlayerState(enCharaState::Dying);	//状態を死亡中に設定.
 						m_pPlayer->SetPlayerAnimCnt(0);					//爆発アニメーションカウンタを０に設定
 
-						m_Enemy[i]->SetDying();
+						m_Enemy[i]->SetState(enCharaState::Dying);
 
 						break;		//敵機と当たればfor文を抜ける
 					}
-					else if (m_Enemy[i]->GetPos().y > WND_H) {
-						//DESTROY enemy
+					else if (m_Enemy[i]->GetPos().y >= 600) {
+						//敵機が画面外に出たら
+						m_Enemy[i]->ResetEnemy();
+						m_pPlayer->UpdateLife(-1);	//ライフを1減らす
 					}
 				}
 
@@ -392,7 +395,7 @@ void CGame::Update()
 							enemyPos.x, enemyPos.y, C_SIZE, C_SIZE))
 						{
 							//命中した時
-							m_Enemy[eNo]->SetDying();
+							m_Enemy[eNo]->SetState(enCharaState::Dying);
 
 							//自機の弾の着弾後の処理
 							m_pPBulletsFlags[psNo] = false;

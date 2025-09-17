@@ -177,7 +177,7 @@ void CPlayer::UpdatePosToCursor(POINT cursor)
 
 int CPlayer::UpdateLife(int dmg)
 {
-	m_Life -= dmg;
+	m_Life += dmg;
 	return m_Life;
 }
 
