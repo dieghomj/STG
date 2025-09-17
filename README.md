@@ -1,1 +1,1 @@
-# STG (Shootin Game)
+# STG (Shooting Game)
