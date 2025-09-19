@@ -107,8 +107,8 @@ void CPlayer::Destroy()
 
 void CPlayer::Draw(HDC hdc, HDC hMemDc, HBITMAP hChara, HBITMAP hExplosion) {
 	
-	VEC2 playerPos = GetPlayerPos();
-	VEC2 playerSprite = GetPlayerSpritePos();
+	VEC2<int> playerPos = GetPlayerPos();
+	VEC2<int> playerSprite = GetPlayerSpritePos();
 	int playerAnimCnt = GetPlayerAnimCnt();
 
 	//自機が生存中
@@ -160,11 +160,19 @@ void CPlayer::Draw(HDC hdc, HDC hMemDc, HBITMAP hChara, HBITMAP hExplosion) {
 
 void CPlayer::UpdatePosToCursor(POINT cursor)
 {
-	m_Player.position.x = cursor.x - (C_SIZE / 2);
-	m_Player.position.y = cursor.y - (C_SIZE / 2);
+	if (cursor.x < 0 || cursor.x > WND_W ||
+		cursor.y < 0 || cursor.y > WND_H)
+	{
+		//Cursor goes outside of bounds
+	}
+	else 
+	{
+		m_Player.position.x = cursor.x - (C_SIZE / 2);
+		m_Player.position.y = cursor.y - (C_SIZE / 2);
+	}
 
-	VEC2 center = Normalize(m_Player.position);
-	VEC2 target = Normalize({ cursor.x,cursor.y });
+	VEC2<int> center = Normalize(m_Player.position);
+	VEC2<int> target = Normalize({ cursor.x,cursor.y });
 
 	/*m_Sight.x = m_Player.position.x + C_SIZE * 0.5;
 	m_Sight.y = m_Player.position.y + C_SIZE * 0.7;*/
@@ -181,7 +189,7 @@ int CPlayer::UpdateLife(int dmg)
 	return m_Life;
 }
 
-VEC2 Normalize(VEC2 v) {
+VEC2<int> Normalize(VEC2<int> v) {
 	int lnt = sqrt(v.x * v.x + v.y * v.y);
 	v.x = v.x / lnt;
 	v.y = v.y / lnt;
@@ -212,8 +220,8 @@ VEC2 Normalize(VEC2 v) {
 
 ////自機が生存中
 //if (m_pPlayer->GetPlayerState() == enCharaState::Living) {
-//	VEC2 playerPos = m_pPlayer->GetPlayerPos();
-//	VEC2 playerSprite = m_pPlayer->GetPlayerSpritePos();
+//	VEC2<int> playerPos = m_pPlayer->GetPlayerPos();
+//	VEC2<int> playerSprite = m_pPlayer->GetPlayerSpritePos();
 //	//キャラクターの画像をメモリDCへコピー
 //	SelectObject(m_hMemDC, m_hChara);
 //	//自機の表示
@@ -226,7 +234,7 @@ VEC2 Normalize(VEC2 v) {
 //
 ////自機が死亡中
 //else if (m_pPlayer->GetPlayerState() == enCharaState::Dying) {
-//	VEC2 playerPos = m_pPlayer->GetPlayerPos();
+//	VEC2<int> playerPos = m_pPlayer->GetPlayerPos();
 //	int playerAnimCnt = m_pPlayer->GetPlayerAnimCnt();
 //	//爆発の画像をメモリDCへコピー
 //	SelectObject(m_hMemDC, m_hExplosion);

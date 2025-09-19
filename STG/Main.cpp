@@ -1,5 +1,36 @@
 #include "Main.h"
 #include "CGame.h"
+#include "CTime.h"
+
+void CalculateFrameStats(CTime* timer, HWND hWnd)
+{
+	static int frameCnt = 0;
+	static float timeElapsed = 0.0f;
+	frameCnt++;
+	// Compute averages over one second period.
+	if ((timer->TotalTime() - timeElapsed) >= 1.0f)
+	{
+		float fps = 0.0f;
+		float mspf = 0.0f;
+		fps = frameCnt; // fps = frameCnt / 1
+		mspf = 1000.0f / fps;
+
+		int length = GetWindowTextLengthA(hWnd);
+
+		char currTitle[128] = "";
+		GetWindowTextA(hWnd, currTitle, length + 1);
+
+		char fpsText[128] = "";
+
+		sprintf_s(fpsText, "%s FPS[%.2f]TimeElapsed[%.2f]", WND_TITLE, fps, mspf);
+		SetWindowTextA(hWnd, fpsText);
+
+		// Reset for next average.
+		frameCnt = 0;
+		timeElapsed += 1.0f;
+	}
+
+}
 
 //スレッド関数.
 DWORD WINAPI ThreadFunc( LPVOID vdParam )
@@ -8,11 +39,15 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 	CGame* pGame = nullptr;	//ポインタ初期化
 	pGame = new CGame((GameWindow*)vdParam);	//ゲームクラスインスタンス
 
+	CTime* pTime = nullptr;
+	pTime = new CTime();
+
 	DWORD frames = 0;		//フレーム数.
 	DWORD beforeTime = 0;	//前の時間.
 	char MsgFPS[128] = "";
 
 	//時間の取得.
+	pTime->Reset();
 	beforeTime = timeGetTime();	//現在の時間を取得.
 
 //----------------------------------------------------------
@@ -27,9 +62,11 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 		DWORD nowTime = 0;		//現在の時間.
 		DWORD progress = 0;		//経過時間.
 		DWORD idealTime = 0;	//理想時間.
+		float deltaTime = 0.0f;
 
 		nowTime = timeGetTime();//現在の時間を取得.
 
+		deltaTime = (float)(nowTime - beforeTime);
 		progress = nowTime - beforeTime;	//経過時間.
 
 		//理想時間の算出.
@@ -39,7 +76,7 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 		//----------------------------------------------------------
 		//  ゲーム処理[WM_TIMER].
 		//----------------------------------------------------------
-		
+		pTime->Tick();
 		pGame->Update();
 
 		//----------------------------------------------------------
@@ -48,10 +85,10 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 		
 		pGame->Draw();
 
-		SetBkMode(pGame->GetScreenDC(), TRANSPARENT); // No background fill
-		//FPSの表示.
-		TextOut(pGame->GetScreenDC(),
-			400, 0, MsgFPS, lstrlen( MsgFPS ) );
+		//SetBkMode(pGame->GetScreenDC(), TRANSPARENT); // No background fill
+		////FPSの表示.
+		//TextOut(pGame->GetScreenDC(),
+		//	350, 0, MsgFPS, lstrlen( MsgFPS ) );
 
 		//描画の時間待ち.
 		if( idealTime > progress ){
@@ -61,9 +98,11 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 		//再描画.
 		InvalidateRect(pGame->GetWnd(), nullptr, FALSE);
 
+		CalculateFrameStats(pTime, pGame->GetWnd());
+
 		if( progress >= 1000 )	//1秒経過.
 		{
-			wsprintf( MsgFPS, "FPS[%03d]", frames );
+			//wsprintf(MsgFPS, "FPS[%03d][%f]", frames, (float)(deltaTime / 1000));
 			beforeTime = nowTime;	//現在の時間に更新.
 			frames = 0;
 		}
@@ -80,6 +119,10 @@ DWORD WINAPI ThreadFunc( LPVOID vdParam )
 	if (pGame != nullptr) {
 		delete pGame;
 		pGame = nullptr;
+	}
+	if (pTime != nullptr) {
+		delete pTime;
+		pTime = nullptr;
 	}
 
 	//スレッド終了通知.

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Global.h"
+#include "CTime.h"
 #include "CPlayer.h"
 #include "CEnemy.h"
 #include "CXInput.h"
@@ -36,6 +37,7 @@ public:
 public:
 	CGame();	// Constructor
 	CGame(GameWindow* pGameWnd);
+	CGame(GameWindow* pGameWnd, CTime* timeController);
 	~CGame();	// Destructor
 	//初期化関数.
 	void InitializeGame();
@@ -60,11 +62,6 @@ public:
 	//BGM無音する
 	void Mute() { m_IsMuted = true; }
 
-
-private:
-	void HandleInput();
-	bool IsKeyDown(std::string id);
-
 private:
 	GameWindow* m_pGameWnd;		//ゲームウィンドウ構造体.
 	CXInput*	m_pXInput;		//コントローラークラスをポインタで用意.
@@ -82,10 +79,9 @@ private:
 	enScene		m_Scene;
 	//スコア
 	int			m_Score;
-	
 	//---------自機------------
 	CPlayer*	m_pPlayer;
-	VEC2*		m_pPBullets;
+	VEC2<int>*		m_pPBullets;
 	bool*		m_pPBulletsFlags;
 	//---------敵機------------
 	CEnemy*		m_Enemy[E_MAX];
@@ -98,11 +94,18 @@ private:
 	//---------入力------------
 	std::map<std::string, bool> m_keyBoardInput;
 	POINT 		m_CursorPos;
+	//----------時間管理-----------
+	CTime*		m_pTime;
 
 	bool CollsionDetection(
 		int Ax, int Ay, int Aw, int Ah,	//矩形Aのｘ、ｙ座標と幅高さ.
 		int Bx, int By, int Bw, int Bh);	//矩形Ｂのｘ、ｙ座標と幅高さ
 
+	void HandlePlayerEnemyInteraction();
+	void HandleBulletEnemyInteraction();
+	void HandleInput();
+	void MapInput();
+	bool IsKeyDown(std::string id);
 
 };
 
