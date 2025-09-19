@@ -131,6 +131,7 @@
     <ClCompile Include="CScene.cpp" />
     <ClCompile Include="CSound.cpp" />
     <ClCompile Include="CSV.cpp" />
+    <ClCompile Include="CTime.cpp" />
     <ClCompile Include="CXInput.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Sound.cpp" />
@@ -144,6 +145,7 @@
     <ClInclude Include="CScene.h" />
     <ClInclude Include="CSound.h" />
     <ClInclude Include="CSV.h" />
+    <ClInclude Include="CTime.h" />
     <ClInclude Include="CXInput.h" />
     <ClInclude Include="Global.h" />
     <ClInclude Include="Main.h" />

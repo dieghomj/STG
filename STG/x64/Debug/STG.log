@@ -1,0 +1,5 @@
+﻿  CGame.cpp
+C:\Users\honka\Documents\STG-master\STG-master\STG\CTime.h(21,35): warning C4244: 'return': 'const double' から 'float' への変換です。データが失われる可能性があります。
+  (ソース ファイル 'CGame.cpp' をコンパイルしています)
+  
+  STG.vcxproj -> C:\Users\honka\Documents\STG-master\STG-master\x64\Debug\STG.exe

@@ -47,17 +47,17 @@ typedef struct _GameWindow
 	BOOL	isWndClose;//ウィンドウ閉じてるか確認用.
 } GameWindow;
 
-struct VEC2
+template<typename T> struct VEC2
 {
-	int x;
-	int y;
+	T x;
+	T y;
 };
 
 
 //キャラクター構造体.
 struct CHARA
 {
-	VEC2 position;	//自機の座標
+	VEC2<int> position;	//自機の座標
 	int state;		//自機の状態.
 	int ExpAnimCnt;	//自機の爆発アニメーションカウンタ
 };

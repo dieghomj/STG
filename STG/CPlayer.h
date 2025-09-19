@@ -11,10 +11,10 @@ public:
 	~CPlayer();
 
 	int GetPlayerState() const { return m_Player.state; }
-	VEC2 GetPlayerPos() const { return m_Player.position; }
+	VEC2<int> GetPlayerPos() const { return m_Player.position; }
 	int GetPlayerAnimCnt() const { return m_Player.ExpAnimCnt; }
 	int GetPlayerPSMax() const { return PS_MAX; }
-	VEC2 GetPlayerSpritePos() const { return m_playerSprite; }
+	VEC2<int> GetPlayerSpritePos() const { return m_playerSprite; }
 	float GetRotationAngle() const { return m_rotationAngle; }
 	int GetPlayerLife() const { return m_Life; }
 
@@ -46,18 +46,17 @@ private:
 
 	//---------自機------------
 	CHARA		m_Player;
-	VEC2		m_playerSprite;
-	VEC2		m_playerAnimSprite;
+	VEC2<int>		m_playerSprite;
+	VEC2<int>		m_playerAnimSprite;
 	float 		m_rotationAngle;
 	int			m_Life;
 
-	VEC2		m_Sight;
+	VEC2<int>		m_Sight;
 
 public:
 	//---------自機弾------------
-	VEC2		m_ps[PS_MAX];
+	VEC2<int>		m_ps[PS_MAX];
 	bool		m_ps_shotFlag[PS_MAX];	//発射フラグ.
-
 };
 
-VEC2 Normalize(VEC2 v);
+VEC2<int> Normalize(VEC2<int> v);

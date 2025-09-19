@@ -3,6 +3,16 @@
 //敵機のクラス
 class CEnemy
 {
+
+public:
+
+	enum enEnemyType
+	{
+		Simple = 0,
+		Elite,
+
+	};
+
 public:
 	
 	static const int E_SPD = 7;//敵機の移動速度
@@ -20,14 +30,14 @@ public:
 	void Shoot();
 	void ResetEnemy();
 
-	VEC2 GetPos() const { return m_Enemy.position; };
+	VEC2<int> GetPos() const { return m_Enemy.position; };
 	int GetState() const { return m_Enemy.state; };
 	int GetAnimCnt() const { return m_Enemy.ExpAnimCnt; };
 
 private :
 	
-		
 	CHARA		m_Enemy;
+
 
 };
 

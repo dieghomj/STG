@@ -34,6 +34,32 @@ CGame::CGame(GameWindow* pGameWnd)
 {
 }
 
+CGame::CGame(GameWindow* pGameWnd, CTime* timeController)
+	: m_pGameWnd(pGameWnd)
+	, m_pTime(timeController)
+	, m_pXInput(nullptr)
+	, m_hMemDC(nullptr)
+	, m_hFont(nullptr)
+	, m_hBack(nullptr)
+	, m_hChara(nullptr)
+	, m_hExplosion(nullptr)
+	, m_hTitle(nullptr)
+	, m_hGameOver(nullptr)
+	, m_hEnding(nullptr)
+	, m_Alpha(0)
+	, m_Scene(enScene::Title)
+	, m_Score()
+	, m_pPlayer(nullptr)
+	, m_pPBullets(nullptr)
+	, m_pPBulletsFlags(nullptr)
+	, m_Enemy()
+	, m_back_y()
+	, m_BGMNo()
+	, m_pBGM1(nullptr)
+	, m_IsMuted(true)
+{
+}
+
 CGame::~CGame()
 {
 }
@@ -41,7 +67,6 @@ CGame::~CGame()
 //初期化関数.
 void CGame::InitializeGame()
 {
-
 	//自機初期配置
 	CHARA player;
 	player.position.x = (WND_W / 2) - (C_SIZE / 2);
@@ -145,7 +170,6 @@ bool CGame::Create()
 	//データの最大数
 	int EnemyCSV_Max = 10;
 
-
 	if (LoadCSV(
 		"Data\\CSV\\enemy_list.csv",
 		&pEnemyCSV,
@@ -184,7 +208,6 @@ void CGame::Destroy()
 	DeleteObject(m_hChara);
 	DeleteObject(m_hBack);
 
-
 	//フォントの解放.
 	DeleteObject(m_hFont);
 	RemoveFontResourceEx(("Data\\Font\\BoldPixels.ttf"), FR_PRIVATE, 0);
@@ -203,6 +226,7 @@ void CGame::Destroy()
 void CGame::Update()
 {
 	m_pXInput->Update();	//コントローラの入力情報を更新
+	MapInput();
 	HandleInput();
 
 	//BGM無音する
@@ -249,85 +273,12 @@ void CGame::Update()
 			m_Alpha = 0;
 		}
 
-		if (IsKeyDown("Enter") ||
-			m_pXInput->IsDown(CXInput::START))
-		{
-			m_Alpha = 0;
-
-			m_Scene = enScene::GameMain;	//ゲームメイン
-
-			//BGMの変更.
-			m_pBGM1->Stop();	//BGM1の停止.
-			//sound_Stop("BGM1", m_pGameWnd->hWnd);	//BGM1の停止
-			sound_PlayLoop("BGM2", m_pGameWnd->hWnd);	//BGM1の停止
-			m_BGMNo = 2;
-
-			//初期化処理
-			InitializeGame();
-		}
-
-		if (GetAsyncKeyState('P') & 0x8000)//0x0001[遅延連射], 0x8000[即連射].
-		{
-			Mute();
-		}
+		HandleInput();
 
 		break;
 	
 	case enScene::GameMain:
 	{
-		//Get cursor position
-		if (GetCursorPos(&m_CursorPos))
-		{
-			ScreenToClient(m_pGameWnd->hWnd, &m_CursorPos);
-			m_pPlayer->UpdatePosToCursor(m_CursorPos);
-		}
-		else
-		{
-			m_CursorPos.x = 0;
-			m_CursorPos.y = 0;
-		}
-
-		//F1キー.
-		if (IsKeyDown("F1")) {
-			//ウィンドウを閉じる通知を送る.
-			PostMessage(m_pGameWnd->hWnd, WM_CLOSE, 0, 0);
-		}
-
-		//↑.
-		if (IsKeyDown("Up"))
-		{
-			m_pPlayer->MoveUp();
-		}
-	
-		//↓.
-		if (IsKeyDown("Down"))
-		{
-			m_pPlayer->MoveDown();
-
-		}
-		//←.
-		if (IsKeyDown("Left"))
-		{
-			m_pPlayer->MoveLeft();
-		}
-
-		//→.
-		if (IsKeyDown("Right"))
-		{
-			m_pPlayer->MoveRight();
-		}
-
-		//Zキー.
-		if (IsKeyDown("Z"))
-		{
-			m_pPlayer->Shoot();
-		}
-
-		//Enterキー.
-		if (IsKeyDown("Enter"))
-		{
-		}
-
 		m_pPlayer->PlayerBulletsMove();
 
 		//敵機の動作
@@ -335,97 +286,8 @@ void CGame::Update()
 			m_Enemy[i]->Move();
 		}
 
-		//自機の生存確認.
-		if (m_pPlayer->GetPlayerState() == enCharaState::Living)
-		{
-			for (int i = 0; i < E_MAX; i++)
-			{
-				VEC2 playerPos = m_pPlayer->GetPlayerPos();
-				VEC2 enemyPos = m_Enemy[i]->GetPos();
-				//敵機が生存している
-				if (m_Enemy[i]->GetState() == enCharaState::Living) {
-					if (CollsionDetection(
-						playerPos.x, playerPos.y, C_SIZE, C_SIZE,
-						enemyPos.x, enemyPos.y, C_SIZE, C_SIZE))
-					{
-						//自機
-						m_pPlayer->SetPlayerState(enCharaState::Dying);	//状態を死亡中に設定.
-						m_pPlayer->SetPlayerAnimCnt(0);					//爆発アニメーションカウンタを０に設定
-
-						m_Enemy[i]->SetState(enCharaState::Dying);
-
-						break;		//敵機と当たればfor文を抜ける
-					}
-					else if (m_Enemy[i]->GetPos().y >= 600) {
-						//敵機が画面外に出たら
-						m_Enemy[i]->ResetEnemy();
-						m_pPlayer->UpdateLife(-1);	//ライフを1減らす
-					}
-				}
-
-			}
-
-		}
-		//自機の爆発処理
-		else if (m_pPlayer->GetPlayerState() == enCharaState::Dying)
-		{
-			m_pPlayer->Destroy();
-
-			if (m_pPlayer->GetPlayerAnimCnt() > 15) {
-				//死亡しているのでゲームオーバー
-				m_Scene = enScene::GameOver;
-
-				//BGMの変更.
-				sound_Stop("BGM2", m_pGameWnd->hWnd);	//BGM1の停止
-				m_pBGM1->PlayLoop();	//BGM1の停止
-				m_BGMNo = 1;
-			}
-		}
-
-		for (int eNo = 0; eNo < E_MAX; eNo++) {
-			//敵機の生存確認
-			if (m_Enemy[eNo]->GetState() == enCharaState::Living) {
-				//自機の弾が発射されている・
-				VEC2 enemyPos = m_Enemy[eNo]->GetPos();
-				for (int psNo = 0; psNo < PS_MAX; psNo++) {
-					if (m_pPBulletsFlags[psNo]) {
-						//自機の弾と敵機の当たり判定
-						if (CollsionDetection(
-							m_pPBullets[psNo].x, m_pPBullets[psNo].y, C_SIZE, C_SIZE,
-							enemyPos.x, enemyPos.y, C_SIZE, C_SIZE))
-						{
-							//命中した時
-							m_Enemy[eNo]->SetState(enCharaState::Dying);
-
-							//自機の弾の着弾後の処理
-							m_pPBulletsFlags[psNo] = false;
-							m_pPBullets[psNo].x = WND_W;
-							m_pPBullets[psNo].y = WND_H;
-
-							//スコア加算
-							m_Score += 1;
-
-							//爆発音を鳴らす
-							//sound_PlaySE("SE1", m_pGameWnd->hWnd); *****************SET TO MUTE*********************
-
-							break;
-						}
-					}
-				}
-			}
-
-			//敵機の爆発処理
-			else if (m_Enemy[eNo]->GetState() == enCharaState::Dying) {
-				m_Enemy[eNo]->DestroyAnim();
-			}
-			else if (m_Enemy[eNo] != nullptr)
-			{
-				delete m_Enemy[eNo];
-				m_Enemy[eNo] = nullptr;
-			}
-				
-
-		}
+		HandlePlayerEnemyInteraction();
+		HandleBulletEnemyInteraction();
 
 		//背景スクロール処理.
 		if (m_back_y > -WND_H) {
@@ -448,20 +310,9 @@ void CGame::Update()
 	break;
 
 	case enScene::GameOver:
-
-		if (IsKeyDown("Enter"))
-		{
-			m_Scene = enScene::Title;	//ゲームメイン
-		}
-
 		break;
 	case enScene::Ending:
-		if (IsKeyDown("Enter"))
-		{
-			m_Scene = enScene::Title;	//ゲームメイン
-		}
 		break;
-
 	default:		//上記以外
 		break;
 	}
@@ -544,7 +395,7 @@ void CGame::Draw()
 			if (m_Enemy[i]->GetState() == enCharaState::Living) {
 				//キャラクターの画像をメモリDCへコピー
 				SelectObject(m_hMemDC, m_hChara);
-				VEC2 enemyPos = m_Enemy[i]->GetPos();
+				VEC2<int> enemyPos = m_Enemy[i]->GetPos();
 				//敵機の表示
 				TransBlt(m_pGameWnd->hScreenDC,			//デバイスコンテキスト
 					enemyPos.x, enemyPos.y,			//表示位置ｘ、ｙ座標
@@ -558,7 +409,7 @@ void CGame::Draw()
 			else if (m_Enemy[i]->GetState() == enCharaState::Dying) {
 				//爆発の画像をメモリDCへコピー
 				SelectObject(m_hMemDC, m_hExplosion);
-				VEC2 enemyPos = m_Enemy[i]->GetPos();
+				VEC2<int> enemyPos = m_Enemy[i]->GetPos();
 				int enemyAnimCnt = m_Enemy[i]->GetAnimCnt();
 				//爆発の表示
 				TransBlt(m_pGameWnd->hScreenDC,	//デバイスコンテキスト
@@ -574,28 +425,36 @@ void CGame::Draw()
 	//*************************************
 	// Screen UI
 	//*************************************
-		RECT rect;
-		rect.top = 0;
-		rect.left = 0;
-		rect.right = WND_W/2;
-		rect.bottom = WND_H/2;
+	{
 
-		//SCORE TEXT
-		char scoreText[128] = "";
-		wsprintf(scoreText, "SCORE:%d", m_Score);
-		HFONT hOldFont = (HFONT)SelectObject(m_pGameWnd->hScreenDC, m_hFont);
-		SetBkMode(m_pGameWnd->hScreenDC, TRANSPARENT); // No background fill
-		DrawTextA(m_pGameWnd->hScreenDC, scoreText, -1, &rect, DT_CENTER | DT_SINGLELINE);
+	RECT rect1;
+	rect1.top = 0;
+	rect1.left = 0;
+	rect1.right = WND_W/2;
+	rect1.bottom = WND_H/2;
 
-		//HP TEXT
-		rect.right = WND_W;
-		rect.right = WND_H;
-		char lifeText[128] = "";
-		wsprintf(lifeText, "HP:%d", m_pPlayer->UpdateLife(0));
-		DrawTextA(m_pGameWnd->hScreenDC, lifeText, -1, &rect, DT_CENTER | DT_SINGLELINE);
+	//SCORE TEXT
+	char scoreText[128] = "";
+	wsprintf(scoreText, "SCORE:%d", m_Score);
+	HFONT hOldFont = (HFONT)
+	SelectObject(m_pGameWnd->hScreenDC, m_hFont);
+	SetBkMode(m_pGameWnd->hScreenDC, TRANSPARENT); // No background fill
+	DrawTextA(m_pGameWnd->hScreenDC, scoreText, -1, &rect1, DT_CENTER | DT_SINGLELINE);
+	SelectObject(m_pGameWnd->hScreenDC, hOldFont);
 
-		SelectObject(m_pGameWnd->hScreenDC, hOldFont);
 
+	//HP TEXT
+	RECT rect2;
+	rect2.top = 0;
+	rect2.left = 0;
+	rect2.right = WND_W;
+	rect2.right = WND_H;
+	char lifeText[128] = "";
+	SelectObject(m_pGameWnd->hScreenDC, m_hFont);
+	wsprintf(lifeText, "HP:%d", m_pPlayer->UpdateLife(0));
+	DrawTextA(m_pGameWnd->hScreenDC, lifeText, -1, &rect2, DT_CENTER | DT_SINGLELINE);
+	SelectObject(m_pGameWnd->hScreenDC, hOldFont);
+	}
 
 	}
 
@@ -626,7 +485,7 @@ void CGame::Draw()
 	}
 }
 
-void CGame::HandleInput()
+void CGame::MapInput()
 {
 	//F1キー.
 	if (GetAsyncKeyState(VK_F1) & 0x0001) {
@@ -689,6 +548,13 @@ void CGame::HandleInput()
 	}
 	else
 		m_keyBoardInput["Enter"] = false;
+
+	if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+	{
+		m_keyBoardInput["LButton"] = true;
+	}
+	else 
+		m_keyBoardInput["LButton"] = false;
 }
 
 bool CGame::IsKeyDown(std::string id)
@@ -712,5 +578,203 @@ bool CGame::CollsionDetection(
 	}
 	//外れた時.
 	return false;
+}
+
+void CGame::HandlePlayerEnemyInteraction()
+{
+	//自機の生存確認.
+	if (m_pPlayer->GetPlayerState() == enCharaState::Living)
+	{
+		for (int i = 0; i < E_MAX; i++)
+		{
+			VEC2<int> playerPos = m_pPlayer->GetPlayerPos();
+			VEC2<int> enemyPos = m_Enemy[i]->GetPos();
+
+			if (m_pPlayer->GetPlayerLife() <= 0)
+				m_pPlayer->SetPlayerState(enCharaState::Dying);
+
+			//敵機が生存している
+			if (m_Enemy[i]->GetState() == enCharaState::Living) {
+				if (CollsionDetection(
+					playerPos.x, playerPos.y, C_SIZE, C_SIZE,
+					enemyPos.x, enemyPos.y, C_SIZE, C_SIZE))
+				{
+					//自機
+					m_pPlayer->SetPlayerState(enCharaState::Dying);	//状態を死亡中に設定.
+					m_pPlayer->SetPlayerAnimCnt(0);					//爆発アニメーションカウンタを０に設定
+
+					m_Enemy[i]->SetState(enCharaState::Dying);
+
+					break;		//敵機と当たればfor文を抜ける
+				}
+				else if (m_Enemy[i]->GetPos().y >= 600) {
+					//敵機が画面外に出たら
+					m_Enemy[i]->ResetEnemy();
+					m_pPlayer->UpdateLife(-1);	//ライフを1減らす
+				}
+			}
+
+		}
+
+	}
+	//自機の爆発処理
+	else if (m_pPlayer->GetPlayerState() == enCharaState::Dying)
+	{
+		m_pPlayer->Destroy();
+
+		if (m_pPlayer->GetPlayerAnimCnt() > 15) {
+			//死亡しているのでゲームオーバー
+			m_Scene = enScene::GameOver;
+
+			//BGMの変更.
+			sound_Stop("BGM2", m_pGameWnd->hWnd);	//BGM1の停止
+			m_pBGM1->PlayLoop();	//BGM1の停止
+			m_BGMNo = 1;
+		}
+	}
+}
+
+void CGame::HandleBulletEnemyInteraction()
+{
+	for (int eNo = 0; eNo < E_MAX; eNo++) {
+		//敵機の生存確認
+		if (m_Enemy[eNo]->GetState() == enCharaState::Living) {
+			//自機の弾が発射されている・
+			VEC2<int> enemyPos = m_Enemy[eNo]->GetPos();
+			for (int psNo = 0; psNo < PS_MAX; psNo++) {
+				if (m_pPBulletsFlags[psNo]) {
+					//自機の弾と敵機の当たり判定
+					if (CollsionDetection(
+						m_pPBullets[psNo].x, m_pPBullets[psNo].y, C_SIZE, C_SIZE,
+						enemyPos.x, enemyPos.y, C_SIZE, C_SIZE))
+					{
+						//命中した時
+						m_Enemy[eNo]->SetState(enCharaState::Dying);
+
+						//自機の弾の着弾後の処理
+						m_pPBulletsFlags[psNo] = false;
+						m_pPBullets[psNo].x = WND_W;
+						m_pPBullets[psNo].y = WND_H;
+
+						//スコア加算
+						m_Score += 1;
+
+						//爆発音を鳴らす
+						//sound_PlaySE("SE1", m_pGameWnd->hWnd); *****************SET TO MUTE*********************
+
+						break;
+					}
+				}
+			}
+		}
+
+		//敵機の爆発処理
+		else if (m_Enemy[eNo]->GetState() == enCharaState::Dying) {
+			m_Enemy[eNo]->DestroyAnim();
+		}
+		else if (m_Enemy[eNo] != nullptr)
+		{
+			delete m_Enemy[eNo];
+			m_Enemy[eNo] = nullptr;
+		}
+	}
+}
+
+void CGame::HandleInput()
+{
+	switch (m_Scene)
+	{
+	case enScene::Title:
+		if (IsKeyDown("Enter") ||
+			m_pXInput->IsDown(CXInput::START))
+		{
+			m_Alpha = 0;
+
+			m_Scene = enScene::GameMain;	//ゲームメイン
+
+			//BGMの変更.
+			m_pBGM1->Stop();	//BGM1の停止.
+			//sound_Stop("BGM1", m_pGameWnd->hWnd);	//BGM1の停止
+			sound_PlayLoop("BGM2", m_pGameWnd->hWnd);	//BGM1の停止
+			m_BGMNo = 2;
+
+			//初期化処理
+			InitializeGame();
+		}
+
+		if (GetAsyncKeyState('P') & 0x8000)//0x0001[遅延連射], 0x8000[即連射].
+		{
+			Mute();
+		}
+		break;
+	case enScene::GameMain:
+		//Get cursor position
+		if (GetCursorPos(&m_CursorPos))
+		{
+			ScreenToClient(m_pGameWnd->hWnd, &m_CursorPos);
+			m_pPlayer->UpdatePosToCursor(m_CursorPos);
+		}
+		else
+		{
+			m_CursorPos.x = 0;
+			m_CursorPos.y = 0;
+		}
+
+		//F1キー.
+		if (IsKeyDown("F1")) {
+			//ウィンドウを閉じる通知を送る.
+			PostMessage(m_pGameWnd->hWnd, WM_CLOSE, 0, 0);
+		}
+
+		//↑.
+		if (IsKeyDown("Up"))
+		{
+			m_pPlayer->MoveUp();
+		}
+
+		//↓.
+		if (IsKeyDown("Down"))
+		{
+			m_pPlayer->MoveDown();
+
+		}
+		//←.
+		if (IsKeyDown("Left"))
+		{
+			m_pPlayer->MoveLeft();
+		}
+
+		//→.
+		if (IsKeyDown("Right"))
+		{
+			m_pPlayer->MoveRight();
+		}
+
+		//Zキー.
+		if (IsKeyDown("Z") || IsKeyDown("LButton"))
+		{
+			m_pPlayer->Shoot();
+		}
+
+		//Enterキー.
+		if (IsKeyDown("Enter"))
+		{
+		}
+		break;
+	case enScene::GameOver:
+		if (IsKeyDown("Enter"))
+		{
+			m_Scene = enScene::Title;	//ゲームメイン
+		}
+		break;
+	case enScene::Ending:
+		if (IsKeyDown("Enter"))
+		{
+			m_Scene = enScene::Title;	//ゲームメイン
+		}
+		break;
+	default:
+		break;
+	}
 }
 
